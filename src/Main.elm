@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Events as BrowserEvents
 import Html exposing (Html, table, td, text, tr)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import List exposing (length)
 import List.Nonempty as List1
@@ -288,19 +288,17 @@ subscriptions _ =
 createCellView : Cell -> Html Msg
 createCellView cell =
     let
-        styles =
-            [ style "border" "1px solid black"
-            , style "padding" "0"
-            , style "width" "50px"
-            , style "height" "50px"
-            ]
+        cellText =
+            (String.fromInt <| Tuple.first cell.position)
+                ++ ", "
+                ++ (String.fromInt <| Tuple.second cell.position)
     in
     case cell.content of
         EmptyCell ->
-            td styles [ text <| (String.fromInt <| Tuple.first cell.position) ++ ", " ++ (String.fromInt <| Tuple.second cell.position) ]
+            td [ class "cell cell-empty" ] [ text cellText ]
 
         SnakeCell ->
-            td (style "background-color" "black" :: style "color" "white" :: styles) [ text <| (String.fromInt <| Tuple.first cell.position) ++ ", " ++ (String.fromInt <| Tuple.second cell.position) ]
+            td [ class "cell cell-snake" ] [ text cellText ]
 
 
 createRowView : List Cell -> Html Msg
