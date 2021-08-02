@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BrowserEvents
+import Constants
 import Html exposing (Html, table, td, text, tr)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
@@ -33,11 +34,6 @@ currentLevel =
     0
 
 
-tickPerSecond : Float
-tickPerSecond =
-    100
-
-
 cellContent : Point -> Snake -> CellContent
 cellContent point snake =
     if List1.any (\p -> p == point) snake.body then
@@ -59,29 +55,15 @@ createRow rowIndex nCols snake =
             )
 
 
-boardRows : Int
-boardRows =
-    10
-
-
-boardColumns : Int
-boardColumns =
-    15
-
-
 createBoard : Snake -> Board
 createBoard snake =
-    List.repeat boardRows []
-        |> List.indexedMap (\rowIndex _ -> createRow rowIndex boardColumns snake)
+    List.repeat Constants.boardRows []
+        |> List.indexedMap (\rowIndex _ -> createRow rowIndex Constants.boardColumns snake)
 
 
 type alias Point =
+    -- (x, y) or (column, row)
     ( Int, Int )
-
-
-
--- (x, y) or (column, row)
--- (x, y)
 
 
 type CellContent
@@ -114,7 +96,7 @@ type alias Snake =
 
 
 type alias Model =
-    { ticks : Int -- 100 ticks per second
+    { ticks : Int -- ticks per second
     , moveInterval : Int -- how many ticks to move a single step
     , steps : Int -- steps made so far
     , board : Board
@@ -244,13 +226,8 @@ update msg model =
 -- SUBSCRIPTIONS
 
 
-tickInterval : Float
-tickInterval =
-    1000 / tickPerSecond
-
-
-toDirection : String -> Msg
-toDirection string =
+toChangeDirectionDirection : String -> Msg
+toChangeDirectionDirection string =
     case string of
         "ArrowLeft" ->
             ChangeDirection Left
@@ -270,13 +247,13 @@ toDirection string =
 
 keyToSnakeDirectionDecoder : Decode.Decoder Msg
 keyToSnakeDirectionDecoder =
-    Decode.map toDirection (Decode.field "key" Decode.string)
+    Decode.map toChangeDirectionDirection (Decode.field "key" Decode.string)
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ Time.every tickInterval (\_ -> Tick)
+        [ Time.every Constants.tickInterval (\_ -> Tick)
         , BrowserEvents.onKeyDown keyToSnakeDirectionDecoder
         ]
 
