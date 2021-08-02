@@ -47,12 +47,12 @@ cellContent point snake =
 
 createRow : Int -> Int -> Snake -> List Cell
 createRow rowIndex nCols snake =
-    List.repeat nCols (Cell ( rowIndex, 0 ) EmptyCell)
+    List.repeat nCols (Cell ( 0, rowIndex ) EmptyCell)
         |> List.indexedMap
             (\colIndex cell ->
                 { cell
-                    | position = ( rowIndex, colIndex )
-                    , content = cellContent ( rowIndex, colIndex ) snake
+                    | position = ( colIndex, rowIndex )
+                    , content = cellContent ( colIndex, rowIndex ) snake
                 }
             )
 
@@ -64,7 +64,7 @@ boardRows =
 
 boardColumns : Int
 boardColumns =
-    10
+    15
 
 
 createBoard : Snake -> Board
@@ -78,6 +78,7 @@ type alias Point =
 
 
 
+-- (x, y) or (column, row)
 -- (x, y)
 
 
