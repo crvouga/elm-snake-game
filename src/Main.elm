@@ -34,31 +34,33 @@ currentLevel =
     0
 
 
-cellContent : Point -> Snake -> CellContent
-cellContent point snake =
+cellContent : Point -> Snake -> Point -> CellContent
+cellContent point snake foodPoint =
     if List1.any (\p -> p == point) snake.body then
         SnakeCell
 
-    else
+    else 
+    if point == foodPoint then FoodCell
+    else 
         EmptyCell
 
 
-createRow : Int -> Int -> Snake -> List Cell
-createRow rowIndex nCols snake =
-    List.repeat nCols (Cell ( 0, rowIndex ) EmptyCell)
+createRow : Int -> Int -> Snake -> Point -> List Cell
+createRow rowIndex nColumns snake foodPoint =
+    List.repeat nColumns (Cell ( 0, rowIndex ) EmptyCell)
         |> List.indexedMap
-            (\colIndex cell ->
+            (\columnIndex cell ->
                 { cell
-                    | position = ( colIndex, rowIndex )
-                    , content = cellContent ( colIndex, rowIndex ) snake
+                    | position = ( columnIndex, rowIndex )
+                    , content = cellContent ( columnIndex, rowIndex ) snake foodPoint
                 }
             )
 
 
-createBoard : Snake -> Board
-createBoard snake =
+createBoard : Snake -> Point -> Board
+createBoard snake foodPoint =
     List.repeat Constants.boardRows []
-        |> List.indexedMap (\rowIndex _ -> createRow rowIndex Constants.boardColumns snake)
+        |> List.indexedMap (\rowIndex _ -> createRow rowIndex Constants.boardColumns snake foodPoint)
 
 
 type alias Point =
@@ -69,6 +71,7 @@ type alias Point =
 type CellContent
     = EmptyCell
     | SnakeCell
+    | FoodCell
 
 
 type alias Cell =
@@ -90,32 +93,34 @@ type SnakeDirection
 
 type alias Snake =
     { body : List1.Nonempty Point
-    , collision : Maybe Point
     , direction : SnakeDirection
     }
 
-
 type alias Model =
-    { ticks : Int -- ticks per second
+    { ticks : Int -- ticks so far
     , moveInterval : Int -- how many ticks to move a single step
     , steps : Int -- steps made so far
     , board : Board
     , snake : Snake
+    , food : Point
     }
 
 
 initialSnake : Snake
 initialSnake =
-    Snake (List1.cons ( 0, 0 ) (List1.singleton ( 1, 0 ))) Nothing Right
+    Snake (List1.cons ( 0, 0 ) (List1.singleton ( 1, 0 ))) Right
 
+initialFoodPoint : Point
+initialFoodPoint = ( Constants.boardColumns // 2, Constants.boardRows // 2 )
 
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { ticks = 0
       , moveInterval = 100 - currentLevel
       , steps = 0
-      , board = createBoard initialSnake
+      , board = createBoard initialSnake initialFoodPoint
       , snake = initialSnake
+      , food = initialFoodPoint
       }
     , Cmd.none
     )
@@ -210,7 +215,7 @@ update msg model =
                         model.snake
 
                 board =
-                    createBoard snake
+                    createBoard snake model.food
             in
             ( { model
                 | ticks = ticks
@@ -276,6 +281,9 @@ createCellView cell =
 
         SnakeCell ->
             td [ class "cell cell-snake" ] [ text cellText ]
+        
+        FoodCell ->
+            td [ class "cell cell-food" ] [ text cellText ]
 
 
 createRowView : List Cell -> Html Msg
