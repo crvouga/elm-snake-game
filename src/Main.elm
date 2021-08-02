@@ -1,8 +1,10 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Events as BrowserEvents
 import Html exposing (Html, table, td, text, tr)
 import Html.Attributes exposing (class, style)
+import Json.Decode as Decode
 import List exposing (length)
 import List.Nonempty as List1
 import Time
@@ -143,6 +145,8 @@ init _ =
 
 type Msg
     = Tick
+    | ChangeDirection SnakeDirection
+    | Noop
 
 
 incrementSteps : Int -> Int -> Int -> Int
@@ -195,6 +199,19 @@ moveSnake snake =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Noop ->
+            ( model, Cmd.none )
+
+        ChangeDirection direction ->
+            let
+                snake =
+                    model.snake
+
+                newSnake =
+                    { snake | direction = direction }
+            in
+            ( { model | snake = newSnake }, Cmd.none )
+
         Tick ->
             let
                 ticks =
@@ -232,9 +249,36 @@ tickInterval =
     1000 / tickPerSecond
 
 
+toDirection : String -> Msg
+toDirection string =
+    case string of
+        "ArrowLeft" ->
+            ChangeDirection Left
+
+        "ArrowRight" ->
+            ChangeDirection Right
+
+        "ArrowUp" ->
+            ChangeDirection Up
+
+        "ArrowDown" ->
+            ChangeDirection Down
+
+        _ ->
+            Noop
+
+
+keyToSnakeDirectionDecoder : Decode.Decoder Msg
+keyToSnakeDirectionDecoder =
+    Decode.map toDirection (Decode.field "key" Decode.string)
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Time.every tickInterval (\_ -> Tick)
+    Sub.batch
+        [ Time.every tickInterval (\_ -> Tick)
+        , BrowserEvents.onKeyDown keyToSnakeDirectionDecoder
+        ]
 
 
 
