@@ -41,12 +41,12 @@ cellContent point snake foodPoint =
 
 createRow : Int -> Int -> Snake -> Point -> List Cell
 createRow rowIndex nColumns snake foodPoint =
-    List.repeat nColumns (Cell ( 0, rowIndex ) EmptyCell)
+    List.repeat nColumns (Cell ( Col 0, Row rowIndex ) EmptyCell)
         |> List.indexedMap
             (\columnIndex cell ->
                 { cell
-                    | position = ( columnIndex, rowIndex )
-                    , content = cellContent ( columnIndex, rowIndex ) snake foodPoint
+                    | position = ( Col columnIndex, Row rowIndex )
+                    , content = cellContent ( Col columnIndex, Row rowIndex ) snake foodPoint
                 }
             )
 
@@ -57,9 +57,13 @@ createBoard snake foodPoint =
         |> List.indexedMap (\rowIndex _ -> createRow rowIndex Constants.boardColumns snake foodPoint)
 
 
-type alias Point =
-    -- (x, y) or (column, row)
-    ( Int, Int )
+col : Column -> Int
+col (Col n) = n
+row : Row -> Int
+row (Row n) = n
+type Column = Col Int
+type Row = Row Int
+type alias Point = ( Column, Row )
 
 
 type CellContent
@@ -100,10 +104,10 @@ type alias Model =
 
 initialSnake : Snake
 initialSnake =
-    Snake (List1.cons ( 0, 0 ) (List1.singleton ( 1, 0 ))) Right
+    Snake (List1.cons ( Col 0, Row 0 ) (List1.singleton ( Col 1, Row 0 ))) Right
 
 initialFoodPoint : Point
-initialFoodPoint = ( Constants.boardColumns // 2, Constants.boardRows // 2 )
+initialFoodPoint = ( Col <| Constants.boardColumns // 2, Row <| Constants.boardRows // 2 )
 
 init : () -> ( Model, Cmd Msg )
 init _ =
@@ -137,16 +141,16 @@ moveSnake snake =
         newHead =
             case snake.direction of
                 Up ->
-                    Tuple.mapSecond (\y -> y - 1) head
+                    Tuple.mapSecond (\(Row y) -> Row (y - 1)) head
 
                 Down ->
-                    Tuple.mapSecond (\y -> y + 1) head
+                    Tuple.mapSecond (\(Row y) -> Row (y + 1)) head
 
                 Left ->
-                    Tuple.mapFirst (\x -> x - 1) head
+                    Tuple.mapFirst (\(Col x) -> Col (x - 1)) head
 
                 Right ->
-                    Tuple.mapFirst (\x -> x + 1) head
+                    Tuple.mapFirst (\(Col x) -> Col (x + 1)) head
 
         tail : List Point
         tail =
@@ -241,9 +245,9 @@ createCellView : Cell -> Html Msg
 createCellView cell =
     let
         cellText =
-            (String.fromInt <| Tuple.first cell.position)
+            (String.fromInt <| col <| Tuple.first cell.position)
                 ++ ", "
-                ++ (String.fromInt <| Tuple.second cell.position)
+                ++ (String.fromInt <| row <| Tuple.second cell.position)
     in
     case cell.content of
         EmptyCell ->
