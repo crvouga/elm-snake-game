@@ -29,6 +29,7 @@ main =
 -- MODEL
 
 
+-- max level ==> Constants.tickPerSecond - 1
 currentLevel : Int
 currentLevel =
     0
@@ -116,7 +117,7 @@ initialFoodPoint = ( Constants.boardColumns // 2, Constants.boardRows // 2 )
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { ticks = 0
-      , moveInterval = 100 - currentLevel
+      , moveInterval = Constants.tickPerSecond - currentLevel
       , steps = 0
       , board = createBoard initialSnake initialFoodPoint
       , snake = initialSnake
