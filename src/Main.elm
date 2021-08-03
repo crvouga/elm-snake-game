@@ -28,13 +28,6 @@ main =
 
 -- MODEL
 
-
--- max level ==> Constants.tickPerSecond - 1
-currentLevel : Int
-currentLevel =
-    0
-
-
 cellContent : Point -> Snake -> Point -> CellContent
 cellContent point snake foodPoint =
     if List1.any (\p -> p == point) snake.body then
@@ -98,9 +91,7 @@ type alias Snake =
     }
 
 type alias Model =
-    { ticks : Int -- ticks so far
-    , moveInterval : Int -- how many ticks to move a single step
-    , steps : Int -- steps made so far
+    { currentLevel : Int
     , board : Board
     , snake : Snake
     , food : Point
@@ -116,9 +107,7 @@ initialFoodPoint = ( Constants.boardColumns // 2, Constants.boardRows // 2 )
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { ticks = 0
-      , moveInterval = Constants.tickPerSecond - currentLevel
-      , steps = 0
+    ( { currentLevel = 0
       , board = createBoard initialSnake initialFoodPoint
       , snake = initialSnake
       , food = initialFoodPoint
@@ -135,15 +124,6 @@ type Msg
     = Tick
     | ChangeDirection SnakeDirection
     | Noop
-
-
-incrementSteps : Int -> Int -> Int -> Int
-incrementSteps steps moveInterval ticks =
-    if modBy moveInterval ticks == 0 then
-        steps + 1
-
-    else
-        steps
 
 
 moveSnake : Snake -> Snake
@@ -202,26 +182,14 @@ update msg model =
 
         Tick ->
             let
-                ticks =
-                    model.ticks + 1
-
-                steps =
-                    incrementSteps model.steps model.moveInterval ticks
-
                 snake =
-                    if steps > model.steps then
-                        moveSnake model.snake
-
-                    else
-                        model.snake
+                    moveSnake model.snake
 
                 board =
                     createBoard snake model.food
             in
             ( { model
-                | ticks = ticks
-                , steps = steps
-                , snake = snake
+                | snake = snake
                 , board = board
               }
             , Cmd.none
@@ -256,14 +224,15 @@ keyToSnakeDirectionDecoder =
     Decode.map toChangeDirectionDirection (Decode.field "key" Decode.string)
 
 
+tickInterval : Int -> Float
+tickInterval currentLevel = toFloat <| 1000 - currentLevel * 10
+
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
     Sub.batch
-        [ Time.every Constants.tickInterval (\_ -> Tick)
+        [ Time.every (tickInterval model.currentLevel) (\_ -> Tick)
         , BrowserEvents.onKeyDown keyToSnakeDirectionDecoder
         ]
-
-
 
 -- VIEW
 

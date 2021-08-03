@@ -1,14 +1,4 @@
-module Constants exposing (tickPerSecond, boardColumns, boardRows, tickInterval)
-
-
-tickPerSecond : Int
-tickPerSecond =
-    10
-
-
-tickInterval : Float
-tickInterval =
-    1000 / toFloat tickPerSecond
+module Constants exposing (boardColumns, boardRows)
 
 
 boardRows : Int
