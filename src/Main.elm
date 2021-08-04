@@ -2,8 +2,8 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BrowserEvents
-import Html exposing (Html, table, td, text, tr, div, h2, h3)
-import Html.Attributes exposing (class)
+import Html exposing (Html, table, td, text, tr, div, h2, h3, span)
+import Html.Attributes exposing (class, style)
 import Json.Decode as Decode
 import Constants
 import List
@@ -288,29 +288,27 @@ subscriptions model =
 -- VIEW
 
 
-createCellView : Maybe Point -> Cell -> Html Msg
-createCellView collision cell =
-        case collision of
-            Just _ -> td [ class "cell cell-collision" ] [  ]
-            Nothing ->  (case cell.content of
+createCellView : Cell -> Html Msg
+createCellView cell =
+        case cell.content of
                 EmptyCell ->
-                    td [ class "cell cell-empty" ] [  ]
+                    div [ class "cell cell-empty" ] [  ]
 
                 SnakeCell ->
-                    td [ class "cell cell-snake" ] [  ]
+                    div [ class "cell cell-snake" ] [  ]
                 
                 FoodCell ->
-                    td [ class "cell cell-food" ] [  ])
+                    div [ class "cell cell-food" ] [ text "⌗" ]
 
 
-createRowView : Maybe Point -> List Cell -> Html Msg
-createRowView collision cells =
-    tr [] (List.map (createCellView collision) cells)
+createRowView : List Cell -> Html Msg
+createRowView cells =
+    div [class "grid-row"] (List.map createCellView cells)
 
 
 hudSpeed : Int -> Html Msg
 hudSpeed currentLevel =
-    div [] [text <| "Speed: x" ++ String.padLeft 3 '0' (String.fromFloat (1100.0 - (tickInterval currentLevel)))]
+    div [] [text <| "Speed: " ++ String.padLeft 4 '0' (String.fromFloat (1100.0 - (tickInterval currentLevel)))]
 
 hudPoints : Int -> Html Msg
 hudPoints currentLevel 
@@ -323,8 +321,23 @@ hud model =
                  , hudSpeed model.currentLevel
                  ]
 
+gameOver : Maybe Point -> Html Msg
+gameOver collision = 
+            (case collision of
+                Nothing -> div [style "display" "none"] []
+                Just _ -> div [class "game-over"] 
+                              [ text "Game Over"]
+                              
+            )
+    
+        
+
 view : Model -> Html Msg
 view model =
-    div [] [ hud model
-           , table [] (List.map (createRowView model.collision) model.board)
-           ]
+    div [class "center-game"] [
+        div [class "game-container"] 
+            [ hud model
+            , div [] (List.map createRowView model.board)
+            ]
+        , gameOver model.collision
+    ]
