@@ -1,4 +1,4 @@
-module Constants exposing (boardColumns, boardRows)
+module Game.Constants exposing (boardColumns, boardRows)
 
 
 boardRows : Int
