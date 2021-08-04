@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BrowserEvents
-import Html exposing (Html, table, td, text, tr, div)
+import Html exposing (Html, table, td, text, tr, div, h2, h3)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
 import Constants
@@ -57,11 +57,6 @@ createBoard snake foodPoint =
     List.repeat Constants.boardRows []
         |> List.indexedMap (\rowIndex _ -> createRow rowIndex Constants.boardColumns snake foodPoint)
 
-
-col : Column -> Int
-col (Col n) = n
-row : Row -> Int
-row (Row n) = n
 type Column = Col Int
 type Row = Row Int
 type alias Point = ( Column, Row )
@@ -183,7 +178,9 @@ findSnakeCollision body =
     let
         head = List1.head body
         tail = List1.tail body
-        matches = List.map (\point -> point == head) tail
+        matches 
+            = List.map (\point -> point == head) tail
+            |> List.filter ((==) True) 
     in
         Maybe.map (\_ -> head) (List.head matches)
 
@@ -194,8 +191,8 @@ findBorderCollision ((Col x, Row y) as head) =
 foodGenerator : Random.Generator Point
 foodGenerator =
     Random.pair 
-        (Random.int 0 (Constants.boardColumns-1))
-        (Random.int 0 (Constants.boardRows-1))
+        (Random.int 0 ( Constants.boardColumns - 1 )) 
+        (Random.int 0 ( Constants.boardRows - 1 ))
     |> Random.map (\(x,y)-> (Col x, Row y))
 
 
@@ -291,32 +288,43 @@ subscriptions model =
 -- VIEW
 
 
-createCellView : Cell -> Html Msg
-createCellView cell =
-    let
-        cellText =
-            (String.fromInt <| col <| Tuple.first cell.position)
-                ++ ", "
-                ++ (String.fromInt <| row <| Tuple.second cell.position)
-    in
-    case cell.content of
-        EmptyCell ->
-            td [ class "cell cell-empty" ] [ text cellText ]
+createCellView : Maybe Point -> Cell -> Html Msg
+createCellView collision cell =
+        case collision of
+            Just _ -> td [ class "cell cell-collision" ] [  ]
+            Nothing ->  (case cell.content of
+                EmptyCell ->
+                    td [ class "cell cell-empty" ] [  ]
 
-        SnakeCell ->
-            td [ class "cell cell-snake" ] [ text cellText ]
-        
-        FoodCell ->
-            td [ class "cell cell-food" ] [ text cellText ]
+                SnakeCell ->
+                    td [ class "cell cell-snake" ] [  ]
+                
+                FoodCell ->
+                    td [ class "cell cell-food" ] [  ])
 
 
-createRowView : List Cell -> Html Msg
-createRowView cells =
-    tr [] (List.map createCellView cells)
+createRowView : Maybe Point -> List Cell -> Html Msg
+createRowView collision cells =
+    tr [] (List.map (createCellView collision) cells)
 
+
+hudSpeed : Int -> Html Msg
+hudSpeed currentLevel =
+    div [] [text <| "Speed: x" ++ String.padLeft 3 '0' (String.fromFloat (1100.0 - (tickInterval currentLevel)))]
+
+hudPoints : Int -> Html Msg
+hudPoints currentLevel 
+    = div [] [ text <| "Score: " ++ String.padLeft 4 '0' (String.fromInt (currentLevel*10))]
+
+hud : Model -> Html Msg
+hud model =
+    div [class "hud"] 
+                 [ hudPoints model.currentLevel
+                 , hudSpeed model.currentLevel
+                 ]
 
 view : Model -> Html Msg
 view model =
-    div [] [ div [] [text <| "Level: " ++ String.fromInt (model.currentLevel+1) ++ " >> Speed: " ++ String.fromFloat (1050.0 - (tickInterval model.currentLevel))]
-           , table [] (List.map createRowView model.board)
+    div [] [ hud model
+           , table [] (List.map (createRowView model.collision) model.board)
            ]
