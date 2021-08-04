@@ -2,13 +2,14 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BrowserEvents
-import Constants
-import Html exposing (Html, table, td, text, tr)
+import Html exposing (Html, table, td, text, tr, div)
 import Html.Attributes exposing (class)
 import Json.Decode as Decode
-import List exposing (length)
+import Constants
+import List
 import List.Nonempty as List1
 import Time
+import Random
 
 
 
@@ -88,17 +89,24 @@ type SnakeDirection
     | Left
     | Right
 
-
+type alias SnakeBody = List1.Nonempty Point
 type alias Snake =
-    { body : List1.Nonempty Point
+    { body : SnakeBody
     , direction : SnakeDirection
     }
+
+snakeHead : Snake -> Point
+snakeHead snake = List1.head snake.body
+
+snakeTail : Snake -> List Point
+snakeTail snake = List1.tail snake.body
 
 type alias Model =
     { currentLevel : Int
     , board : Board
     , snake : Snake
     , food : Point
+    , collision : Maybe Point
     }
 
 
@@ -106,15 +114,16 @@ initialSnake : Snake
 initialSnake =
     Snake (List1.cons ( Col 0, Row 0 ) (List1.singleton ( Col 1, Row 0 ))) Right
 
-initialFoodPoint : Point
-initialFoodPoint = ( Col <| Constants.boardColumns // 2, Row <| Constants.boardRows // 2 )
+initialFood : Point
+initialFood = ( Col <| Constants.boardColumns // 2, Row <| Constants.boardRows // 2 )
 
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { currentLevel = 0
-      , board = createBoard initialSnake initialFoodPoint
+      , board = createBoard initialSnake initialFood
       , snake = initialSnake
-      , food = initialFoodPoint
+      , food = initialFood
+      , collision = Nothing
       }
     , Cmd.none
     )
@@ -127,6 +136,7 @@ init _ =
 type Msg
     = Tick
     | ChangeDirection SnakeDirection
+    | SpawnFood Point
     | Noop
 
 
@@ -164,8 +174,29 @@ moveSnake snake =
         | body =
             snake.body
                 |> List1.replaceHead newHead
-                |> List1.replaceTail (List.take (length tail) newTail)
+                |> List1.replaceTail newTail
+                --|> List1.replaceTail (List.take (List.length tail) newTail)
     }
+
+findSnakeCollision : SnakeBody -> Maybe Point
+findSnakeCollision body = 
+    let
+        head = List1.head body
+        tail = List1.tail body
+        matches = List.map (\point -> point == head) tail
+    in
+        Maybe.map (\_ -> head) (List.head matches)
+
+findBorderCollision : Point -> Maybe Point
+findBorderCollision ((Col x, Row y) as head) = 
+    if x < 0 || y < 0 || x > Constants.boardColumns || y > Constants.boardRows then Just head else Nothing
+
+foodGenerator : Random.Generator Point
+foodGenerator =
+    Random.pair 
+        (Random.int 0 (Constants.boardColumns-1))
+        (Random.int 0 (Constants.boardRows-1))
+    |> Random.map (\(x,y)-> (Col x, Row y))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -184,19 +215,39 @@ update msg model =
             in
             ( { model | snake = newSnake }, Cmd.none )
 
+        SpawnFood point ->
+            ( {model | food = point}, Cmd.none )
         Tick ->
             let
-                snake =
+                movingSnake : Snake
+                movingSnake =
                     moveSnake model.snake
+
+                isFoodEaten = snakeHead movingSnake == model.food
+                level = if isFoodEaten then model.currentLevel + 1 else model.currentLevel
+
+                snake : Snake
+                snake = 
+                    if isFoodEaten 
+                    then movingSnake 
+                    else { movingSnake | body = movingSnake.body |> List1.replaceTail ((List.take (List.length (snakeTail model.snake)) (snakeTail movingSnake)) ) }
 
                 board =
                     createBoard snake model.food
+                
+                snakeCollision = findSnakeCollision snake.body
+                borderCollision = findBorderCollision <| List1.head snake.body
+                collision = List.filterMap identity [snakeCollision, borderCollision] |> List.head
+
+
             in
             ( { model
                 | snake = snake
                 , board = board
+                , currentLevel = level
+                , collision = collision
               }
-            , Cmd.none
+            , if isFoodEaten then Random.generate SpawnFood foodGenerator else Cmd.none
             )
 
 
@@ -229,14 +280,13 @@ keyToSnakeDirectionDecoder =
 
 
 tickInterval : Int -> Float
-tickInterval currentLevel = toFloat <| 1000 - currentLevel * 10
+tickInterval currentLevel = toFloat <| max 100 (1000 - currentLevel * 50)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.batch
-        [ Time.every (tickInterval model.currentLevel) (\_ -> Tick)
-        , BrowserEvents.onKeyDown keyToSnakeDirectionDecoder
-        ]
+    case model.collision of
+       Nothing -> Sub.batch [ Time.every (tickInterval model.currentLevel) (\_ -> Tick) , BrowserEvents.onKeyDown keyToSnakeDirectionDecoder]
+       Just _ -> Sub.none
 
 -- VIEW
 
@@ -267,4 +317,6 @@ createRowView cells =
 
 view : Model -> Html Msg
 view model =
-    table [] (List.map createRowView model.board)
+    div [] [ div [] [text <| "Level: " ++ String.fromInt (model.currentLevel+1) ++ " >> Speed: " ++ String.fromFloat (1050.0 - (tickInterval model.currentLevel))]
+           , table [] (List.map createRowView model.board)
+           ]
