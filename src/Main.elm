@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Browser.Events as BrowserEvents
+import Debug
 import Game.Board as Board exposing (Board, Cell, CellContent(..))
 import Game.Common exposing (Column(..), Point, Row(..))
 import Game.Constants as Constants
@@ -212,6 +213,10 @@ tickInterval currentLevel =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
+    let
+        _ =
+            Debug.log "model" {}
+    in
     case model.collision of
         Nothing ->
             Sub.batch [ Time.every (tickInterval model.currentLevel) (\_ -> Tick), BrowserEvents.onKeyDown keyToSnakeDirectionDecoder ]
